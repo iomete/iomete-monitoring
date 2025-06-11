@@ -79,11 +79,17 @@ spec:
               drop:
                 - ALL
 
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.database.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.database.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.database.tolerations }}
+      tolerations:
+        {{- toYaml .Values.database.tolerations | nindent 8 }}
+    {{- else }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

@@ -58,16 +58,6 @@ data:
         options:
           path: /etc/grafana/provisioning/dashboards/files/alerts
 
-
-      - name: SupServDashboards
-        org_id: 1
-        folder: Alerts
-        type: file
-        disableDeletion: false
-        updateIntervalSeconds: 10
-        options:
-          path: /etc/grafana/provisioning/dashboards/files/sup-serv
-
       - name: InternalDashboards
         org_id: 1
         folder: Internal

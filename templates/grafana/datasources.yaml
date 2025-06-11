@@ -20,10 +20,10 @@ data:
         httpMethod: "POST"
         manageAlerts: false
 
- 
+{{ if .Values.loki.enabled }}
     - name: Loki
       type: loki
-      url: http://loki-gateway.monitoring.svc.cluster.local
+      url: http://{{ .Release.Name }}-loki-gateway.svc.cluster.local
       #url: http://loki:3100
       isDefault: false
       editable: false
@@ -32,4 +32,4 @@ data:
         queryTimeout: "30s"
         httpMethod: "POST"
         maxLines: 1000
- 
+{{ end }}

@@ -77,11 +77,17 @@ spec:
         hostPath:
           path: /var/lib/docker
 
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.cadvisor.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.cadvisor.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.cadvisor.tolerations }}
+      tolerations:
+        {{- toYaml .Values.cadvisor.tolerations | nindent 8 }}
+    {{- else }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

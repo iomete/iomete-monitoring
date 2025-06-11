@@ -101,8 +101,6 @@ spec:
           {{- end }}
             - name: dashboards-alerts-gv
               mountPath: /etc/grafana/provisioning/dashboards/files/alerts
-            - name: dashboards-support-services
-              mountPath: /etc/grafana/provisioning/dashboards/files/sup-serv
             - name: storage
               mountPath:  /var/lib/grafana/data
             - name: config
@@ -137,11 +135,6 @@ spec:
       - name: dashboards-alerts-gv
         configMap:
           name: {{ .Release.Name }}-grafana-alert-folder-gv
-
-      - name: dashboards-support-services
-        configMap:
-          name: {{ .Release.Name }}-grafana-support-services
-
 
       - name: config
         configMap:
@@ -181,11 +174,17 @@ spec:
         emptyDir: {}
       {{- end }}
 
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.grafana.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.grafana.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.grafana.tolerations }}
+      tolerations:
+        {{- toYaml .Values.grafana.tolerations | nindent 8 }}
+    {{- else }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

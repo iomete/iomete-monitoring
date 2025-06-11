@@ -51,11 +51,17 @@ spec:
             drop:
               - ALL
 
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.kubestatemetrics.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.kubestatemetrics.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.kubestatemetrics.tolerations }}
       tolerations:
-        {{- toYaml .Values.global.tolerations | nindent 8 }}
+        {{- toYaml .Values.kubestatemetrics.tolerations | nindent 8 }}
+    {{- else }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}  
     {{- end }}

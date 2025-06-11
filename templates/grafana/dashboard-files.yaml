@@ -55,17 +55,19 @@ data:
 
 
 ---
- 
+
+ {{ if .Values.grafana.alerting.enabled }}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-grafana-support-services
+  name: {{ .Release.Name }}-grafana-alert-folder
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
 data:
   {{- $files := .Files }}
-  {{- range $path, $_ := .Files.Glob "grafana-dashboards/supp-serv/*.json" }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/alerts/*.json" }}
   {{ base $path }}: |-
     {{- $content := $files.Get $path }}
     {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
@@ -73,7 +75,7 @@ data:
     {{- $content | nindent 4 }}
   {{- end }}
 
- 
+{{- end }}
 
 ---
 

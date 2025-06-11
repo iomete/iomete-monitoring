@@ -2,6 +2,6 @@ apiVersion: v2
 appVersion: 3.0.0
 description: Promtail is an agent which ships the contents of local logs to a Loki
   instance
+name: promtail
 type: application
 version: 6.16.6
-name: promtail
