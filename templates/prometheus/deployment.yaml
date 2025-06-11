@@ -150,11 +150,17 @@ spec:
         emptyDir: {}
       {{- end }}
 
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.prometheus.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.prometheus.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.prometheus.tolerations }}
+      tolerations:
+        {{- toYaml .Values.prometheus.tolerations | nindent 8 }}
+    {{- else }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

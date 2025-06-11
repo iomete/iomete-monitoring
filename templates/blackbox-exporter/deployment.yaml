@@ -49,15 +49,20 @@ spec:
             capabilities:
               drop:
                   - ALL
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.blackbox.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.blackbox.nodeSelector | nindent 8 }}
+    {{- else }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.blackbox.tolerations }}
+      tolerations:
+        {{- toYaml .Values.blackbox.tolerations | nindent 8 }}
+    {{- else }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}
-      
       volumes:
         - name: config
           configMap:
