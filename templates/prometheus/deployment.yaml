@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+    app: prometheus
+spec:
+  {{- if .Values.prometheus.ha.enabled }}
+  replicas: {{ .Values.prometheus.ha.replicas }}
+  {{- else }}
+  replicas: 1
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 6}}
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 8}}
+        app: prometheus
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/prometheus/config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-prometheus-sa
+      securityContext:
+        fsGroup: 65534  
+        seccompProfile:
+          type: RuntimeDefault
+      {{- if .Values.prometheus.affinity }}
+      affinity:
+{{ toYaml .Values.prometheus.affinity | indent 8 }}
+      {{- end }}
+      {{- if .Values.prometheus.tolerations }}
+      tolerations:
+{{ toYaml .Values.prometheus.tolerations | indent 8 }}
+      {{- end }}
+      {{- with .Values.docker.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: prometheus
+        image: "{{ .Values.docker.repo }}/prometheus:v3.1.0"
+        imagePullPolicy: {{ .Values.docker.pullPolicy }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          runAsGroup: 65534
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 4000m
+            memory: 12Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.enable-lifecycle
+        - --web.enable-admin-api
+        - --storage.tsdb.retention.time={{ .Values.prometheus.retention }}
+        - --web.enable-remote-write-receiver
+        ports:
+        - name: http
+          containerPort: 9090
+        # lifecycle:
+        #     preStop:
+        #       exec:
+        #         command: ["/bin/sh", "-c", "sleep 3"]
+        {{- if .Values.prometheus.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+          initialDelaySeconds: {{ .Values.prometheus.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.prometheus.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.prometheus.readinessProbe.periodSeconds }}
+          successThreshold: {{ .Values.prometheus.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.prometheus.readinessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.prometheus.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+          initialDelaySeconds: {{ .Values.prometheus.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.prometheus.livenessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.prometheus.livenessProbe.periodSeconds }}
+          successThreshold: {{ .Values.prometheus.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.prometheus.livenessProbe.failureThreshold }}
+        {{- end }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus/
+ 
+        {{- if .Values.prometheus.persistence.enabled }}
+        - name: storage-volume
+          mountPath: /prometheus
+        {{- end }}
+
+      - name: configmap-reload
+        image: "{{ .Values.docker.repo }}/configmap-reload:0.8.1"
+        imagePullPolicy: {{ .Values.docker.pullPolicy }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          runAsGroup: 65534
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        args:
+          - --volume-dir=/etc/prometheus
+          - --webhook-url=http://localhost:9090/-/reload
+          - --webhook-method=POST
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+          readOnly: true
+        - name: storage-volume
+          mountPath: /prometheus
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ .Release.Name }}-prometheus-config
+      {{- if .Values.prometheus.persistence.enabled }}
+      - name: storage-volume
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-prometheus
+      {{- else }}
+      - name: storage-volume
+        emptyDir: {}
+      {{- end }}
+
+    {{- if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+    {{- end }}

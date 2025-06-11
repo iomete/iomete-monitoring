@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-cadvisor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+    app: cadvisor
+spec:
+  selector:
+    matchLabels:
+      {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 6}}
+      app: cadvisor
+  template:
+    metadata:
+      labels:
+        {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 8}}
+        app: cadvisor
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: {{ .Release.Name }}-prometheus-sa
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: cadvisor
+        image: {{ .Values.docker.repo }}/cadvisor:v0.47.2
+        imagePullPolicy: {{ .Values.docker.pullPolicy }}
+        args:
+          - --port=8080
+          - --housekeeping_interval=30s
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: rootfs
+          mountPath: /rootfs
+          readOnly: true
+        - name: var-run
+          mountPath: /var/run
+          readOnly: false
+        - name: sys
+          mountPath: /sys
+          readOnly: true
+        - name: docker
+          mountPath: /var/lib/docker
+          readOnly: true
+        resources:
+          requests:
+            memory: 200Mi
+            cpu: 150m
+          limits:
+            memory: 1Gi
+            cpu: 300m
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          runAsGroup: 65534
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+      volumes:
+      - name: rootfs
+        hostPath:
+          path: /
+      - name: var-run
+        hostPath:
+          path: /var/run
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: docker
+        hostPath:
+          path: /var/lib/docker
+
+    {{- if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,61 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+    app: prometheus
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 6}}
+      app: prometheus
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow inbound metrics scraping
+    - ports:
+        - port: 9090
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 14}}
+        {{- if .Values.networkPolicy.additionalAllowedIngress }}
+        {{- toYaml .Values.networkPolicy.additionalAllowedIngress | nindent 8 }}
+        {{- end }}
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow scraping metrics from all pods in monitored namespaces
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                {{- range .Values.dataPlaneNamespaces }}
+                - {{ . | quote }}
+                {{- end }}
+      ports:
+        - port: 9090
+          protocol: TCP
+        - port: 9100
+          protocol: TCP
+        - port: 8080
+          protocol: TCP
+        - port: 9091
+          protocol: TCP
+    {{- if .Values.networkPolicy.additionalAllowedEgress }}
+    {{- toYaml .Values.networkPolicy.additionalAllowedEgress | nindent 4 }}
+    {{- end }}
+{{- end }} 

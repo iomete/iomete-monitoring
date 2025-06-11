@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboards
+  namespace: {{ .Release.Namespace }}
+data:
+  dashboards.yaml: |-
+    apiVersion: 1
+    providers:
+      # - name: 'IOMETE'
+      #   orgId: 1
+      #   folder: 'IOMETE'
+      #   type: file
+      #   disableDeletion: false
+      #   editable: true
+      #   allowUiUpdates: true
+      #   options:
+      #     path: /etc/grafana/provisioning/dashboards/files
+      #     foldersFromFilesStructure: false
+
+      - name: ApplicationDashboards
+        org_id: 1
+        folder: Application
+        type: file
+        disableDeletion: false
+        editable: true
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/application
+          foldersFromFilesStructure: false
+
+      - name: SparkDashboards
+        org_id: 1
+        folder: Spark
+        type: file
+        disableDeletion: false
+        editable: true
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/spark
+          foldersFromFilesStructure: false
+
+      - name: KubernetesDashboards
+        org_id: 1
+        folder: Kubernetes
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/kubernetes
+
+      - name: AlertDashboards
+        org_id: 1
+        folder: Alerts
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/alerts
+
+
+      - name: SupServDashboards
+        org_id: 1
+        folder: Alerts
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/sup-serv
+
+      - name: InternalDashboards
+        org_id: 1
+        folder: Internal
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /etc/grafana/provisioning/dashboards/files/internal

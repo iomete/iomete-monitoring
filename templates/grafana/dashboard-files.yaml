@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-application-folder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+data:
+  {{- $files := .Files }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/application/*.json" }}
+  {{ base $path }}: |-
+    {{- $content := $files.Get $path }}
+    {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
+    {{- $content = replace "${datasource}" "Prometheus" $content }}
+    {{- $content | nindent 4 }}
+  {{- end }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-spark-folder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+data:
+  {{- $files := .Files }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/spark/*.json" }}
+  {{ base $path }}: |-
+    {{- $content := $files.Get $path }}
+    {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
+    {{- $content = replace "${datasource}" "Prometheus" $content }}
+    {{- $content | nindent 4 }}
+  {{- end }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-kubernetes-folder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+data:
+  {{- $files := .Files }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/kubernetes/*.json" }}
+  {{ base $path }}: |-
+    {{- $content := $files.Get $path }}
+    {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
+    {{- $content = replace "${datasource}" "Prometheus" $content }}
+    {{- $content | nindent 4 }}
+  {{- end }}
+
+
+---
+ 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-support-services
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+data:
+  {{- $files := .Files }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/supp-serv/*.json" }}
+  {{ base $path }}: |-
+    {{- $content := $files.Get $path }}
+    {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
+    {{- $content = replace "${datasource}" "Prometheus" $content }}
+    {{- $content | nindent 4 }}
+  {{- end }}
+
+ 
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-internal-folder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+data:
+  {{- $files := .Files }}
+  {{- range $path, $_ := .Files.Glob "grafana-dashboards/internal/*.json" }}
+  {{ base $path }}: |-
+    {{- $content := $files.Get $path }}
+    {{- $content = replace "${DS_PROMETHEUS}" "Prometheus" $content }}
+    {{- $content = replace "${datasource}" "Prometheus" $content }}
+    {{- $content | nindent 4 }}
+  {{- end }}

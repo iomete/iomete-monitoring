@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-kube-state-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-kube-state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-kube-state-metrics
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: {{ .Release.Name }}-prometheus-sa
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.docker.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: kube-state-metrics
+        image: {{ .Values.docker.repo }}/kube-state-metrics:2.15.0
+        imagePullPolicy: {{ .Values.docker.pullPolicy }}
+        args:
+        - --namespaces={{ .Release.Namespace }},{{ .Values.iometeSystemNamespace }}{{- range .Values.dataPlaneNamespaces }},{{ . }}{{- end }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: metrics
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          runAsGroup: 65534
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+
+    {{- if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+    {{- end }}

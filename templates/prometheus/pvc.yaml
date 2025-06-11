@@ -1,0 +1,18 @@
+{{- if .Values.prometheus.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-prometheus
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4 }}
+    app: prometheus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with include "chart.storageClassName" (dict "storageClassName" .Values.prometheus.persistence.storageClassName "global" .Values.global) }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.prometheus.persistence.size | quote }}
+{{- end }}

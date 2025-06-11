@@ -1,0 +1,41 @@
+apiVersion: v2
+name: iomete-monitoring-chart
+
+description: A Helm chart for IOMETE monitoring stack including Prometheus, Grafana, AlertManager, and various exporters
+icon: https://raw.githubusercontent.com/iomete/.github/main/iomete-icon-fluoro.svg
+dependencies:
+  - name: loki
+    version: "6.25.0"
+    condition: loki.enabled
+  - name: promtail
+    version: "6.16.6"
+    condition: loki.enabled
+type: application
+version: 2.2.0
+
+appVersion: "2.0.0"
+
+keywords:
+  - monitoring
+  - prometheus
+  - grafana
+  - metrics
+  - alerting
+  - logging
+  - loki
+  - promtail
+
+maintainers:
+  - name: IOMETE Team
+    email: support@iomete.com
+
+annotations:
+  # artifacthub.io/license: ""
+  artifacthub.io/links: |
+    - name: Website
+      url: https://iomete.com
+    - name: Documentation
+      url: https://iomete.com/resources
+  artifacthub.io/signKey: |
+    fingerprint: 98EB2C12A2B26037F6A395F39907F4E16F751C8C
+    url: https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x98eb2c12a2b26037f6a395f39907f4e16f751c8c

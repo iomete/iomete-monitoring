@@ -1,0 +1,16 @@
+apiVersion: v2
+appVersion: 3.4.2
+description: Helm chart for Grafana Loki and Grafana Enterprise Logs supporting both
+  simple, scalable and distributed modes.
+home: https://grafana.github.io/helm-charts
+icon: https://grafana.com/docs/loki/latest/logo_and_name.png
+maintainers:
+- name: trevorwhitney
+- name: jeschkies
+name: loki
+sources:
+- https://github.com/grafana/loki
+- https://grafana.com/oss/loki/
+- https://grafana.com/docs/loki/latest/
+type: application
+version: 6.28.0

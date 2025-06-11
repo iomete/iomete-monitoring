@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-prometheus-config
+  namespace: {{ .Release.Namespace }}
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 10s
+      evaluation_interval: 10s
+
+    
+
+    rule_files:
+      - /etc/prometheus/rules/*.rules
+
+    scrape_configs:
+
+      - job_name: 'cadvisor'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - {{ .Release.Namespace }}
+        metrics_path: '/metrics'
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: 'cadvisor'
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            regex: 'true'
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_ip]
+            regex: '(.+)'
+            replacement: '${1}:8080'
+            target_label: '__address__'
+            action: replace
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: 'kubernetes_namespace'
+            action: replace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: 'kubernetes_pod_name'
+            action: replace
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            action: replace
+            target_label: 'kubernetes_pod_node_name'
+
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                {{- range (include "monitoring.namespaces" . | splitList " ") }}
+                - {{ . }}
+                {{- end }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: {{ printf "%s-node-exporter" .Release.Name }}
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: instance
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - target_label: job
+            replacement: node-exporter
+      - job_name: 'spark-operators'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                {{- range (include "monitoring.namespaces" . | splitList " ") }}
+                - {{ . }}
+                {{- end }}
+        metrics_path: /metrics
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: (spark-operator-webhook|spark-operator-controller)
+            action: keep
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: component
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - target_label: service
+            replacement: spark-operator
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep
+      - job_name: 'iomete-services'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                {{- range (include "monitoring.namespaces" . | splitList " ") }}
+                - {{ . }}
+                {{- end }}
+        metrics_path: /q/metrics
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: (iom-core|iom-sql|iom-identity|iom-catalog|iom-rest-catalog|iom-gateway)
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: http
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_service_label_app]
+            target_label: app
+
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'kube-state-metrics'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - {{ .Release.Namespace }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: {{ .Release.Name }}-kube-state-metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+      {{- if .Values.typesenseExporter.enabled }}
+      - job_name: 'typesense'
+        static_configs:
+          - targets:
+            - {{ .Release.Name }}-typesense-exporter.{{ .Release.Namespace }}.svc:8888
+      {{- end }}
+
+      # Health checks using Blackbox Exporter
+      - job_name: 'iomete-health-checks'
+        metrics_path: /probe
+        params:
+          module: [http_2xx]
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - {{ .Values.iometeSystemNamespace }}
+        relabel_configs:
+          # Keep only our services
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: (iom-core|iom-identity|iom-sql|iom-catalog|iom-rest-catalog|iom-socket|spark-operator.*|spark-operator-submit-service|typesense|iom-spark-connect-rest-client|svc-iom-spark-connect-ui|spark-history)
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+
+          # Set health check paths based on service type
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: (iom-core|iom-identity|iom-sql|iom-catalog|iom-rest-catalog)
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:8080/q/health/live
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: spark-operator.*
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:8081/healthz
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: (iom-socket|spark-operator-submit-service|iom-spark-connect-rest-client)
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:8080/health
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: typesense
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:8108/health
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: spark-history
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:18080/api/v1/version
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: __param_target
+            regex: svc-iom-spark-connect-ui
+            replacement: http://${1}.{{ .Values.iometeSystemNamespace }}.svc:4040/api/v1/version
+
+          # Point to blackbox exporter
+          - target_label: __address__
+            replacement: {{ .Release.Name }}-blackbox-exporter:9115
+
+          # Add labels
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: type
+            regex: (iom-core|iom-identity|iom-sql|iom-catalog|iom-rest-catalog)
+            replacement: quarkus
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: type
+            regex: spark-operator.*
+            replacement: spark-operator
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: type
+            regex: (spark-history|svc-iom-spark-connect-ui)
+            replacement: spark-ui
+          - source_labels: [__param_target]
+            target_label: instance
+
+      {{- if .Values.database.enabled }}
+      - job_name: 'postgresql'
+        static_configs:
+          - targets:
+            - {{ .Release.Name }}-postgres-exporter:9187
+        metrics_path: /metrics
+      {{- end }}
+
+      {{- if .Values.storage.enabled }}
+      {{- if or (eq .Values.storage.type "minio") (eq .Values.storage.type "dell_ecs") }}
+      # MinIO Bucket Metrics
+      - job_name: 'storage-bucket-metrics'
+        metrics_path: /minio/v2/metrics/bucket
+        scheme: http
+        bearer_token: {{ .Values.storage.minioSettings.token }}
+        static_configs:
+          - targets:
+            {{- if eq .Values.storage.type "minio" }}
+            - {{ trimPrefix "http://" .Values.storage.minioSettings.endpoint }}
+            {{- else }}
+            - {{ trimPrefix "http://" .Values.storage.dellEcsSettings.endpoint }}
+            {{- end }}
+        relabel_configs:
+          - target_label: bucket
+            replacement: {{ .Values.storage.bucketName }}
+      {{- end }}
+      {{- end }}
+
+      # Spark Driver and Executor metrics
+      - job_name: 'spark-drivers'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                {{- range (include "monitoring.namespaces" . | splitList " ") }}
+                - {{ . }}
+                {{- end }}
+        metrics_path: /metrics/executors/prometheus
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            regex: .*-driver-svc$
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: spark-ui
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_ready]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_address_target_kind]
+            regex: Pod
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_address_target_name]
+            target_label: spark_app_id
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_endpoint_address_target_name]
+            target_label: pod_name
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: ^.*$
+            action: keep
+          - source_labels: [up]
+            target_label: spark_driver_up
+          - source_labels: [__name__]
+            target_label: error
+            regex: ^([^_]*)_errors_total$

@@ -1,0 +1,105 @@
+{{- if .Values.database.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-postgres-exporter
+  labels:
+    app: {{ .Release.Name }}-postgres-exporter
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-postgres-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-postgres-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.docker.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgres-exporter
+          image: {{ .Values.docker.repo }}/postgres-exporter:v0.15.0
+          imagePullPolicy: {{ .Values.docker.pullPolicy }}
+          args:
+            - --web.listen-address=:9187
+            # Enable non-default collectors we need
+            - --collector.database_wraparound
+            - --collector.long_running_transactions
+            - --collector.postmaster
+            - --collector.process_idle
+            - --collector.stat_activity_autovacuum
+            - --collector.stat_statements
+            - --collector.statio_user_indexes
+            # Explicitly disable collectors we don't need
+            - --no-collector.xlog_location
+            - --no-collector.stat_wal_receiver
+          env:
+            - name: DATA_SOURCE_NAME
+              value: "postgresql://{{ .Values.database.adminCredentials.user }}:{{ .Values.database.adminCredentials.password }}@{{ .Values.database.host }}:{{ .Values.database.port }}/postgres?sslmode={{ .Values.database.ssl.mode }}"
+          ports:
+            - name: http
+              containerPort: 9187
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+    {{- if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-postgres-exporter
+  labels:
+    app: {{ .Release.Name }}-postgres-exporter
+spec:
+  ports:
+    - name: http
+      port: 9187
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: {{ .Release.Name }}-postgres-exporter
+{{- end }}

@@ -1,0 +1,420 @@
+{{ if .Values.grafana.alerting.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-alerts
+  namespace: {{ .Release.Namespace }}
+data:
+  container-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.serviceAvailability.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.serviceAvailability.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.serviceAvailability.alertInterval | quote }}
+        rules:
+        {{- range .Values.grafana.alerting.alerts.AlertServicesList }}
+          - uid: {{ printf "%s-%s" $.Values.grafana.alerting.alerts.serviceAvailability.alertUid . | quote }}
+            title: {{ printf "%s - %s" $.Values.grafana.alerting.alerts.serviceAvailability.alertTitle . | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ $.Values.grafana.alerting.alerts.serviceAvailability.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ $.Values.grafana.alerting.alerts.serviceAvailability.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >-
+                    absent(kube_endpoint_address{endpoint="{{ . }}"})
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+            noDataState: OK
+            execErrState: Error
+            for: {{ $.Values.grafana.alerting.alerts.serviceAvailability.alertFor | quote }}
+            labels:
+              dashboardUid: {{ $.Values.grafana.alerting.alerts.serviceAvailability.dashboardUid | quote }}
+              panelId: {{ index $.Values.grafana.alerting.alerts.serviceAvailability.panelIdMap . | quote }}  
+              severity: {{ $.Values.grafana.alerting.alerts.serviceAvailability.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ $.Values.grafana.alerting.alerts.serviceAvailability.dashboardUid | quote }}
+              __panelId__: {{ index $.Values.grafana.alerting.alerts.serviceAvailability.panelIdMap . | quote }}  
+              summary: "Service {{ . }} is unavailable"
+              description: 'Endpoint {{ . }} has no available addresses. Service may be down or misconfigured.'
+        {{- end }}
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.podrestart.alertUid | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.podrestart.alertFolder  | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.podrestart.alertInterval  | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.podrestart.alertUid | quote }}
+            title: {{ .Values.grafana.alerting.alerts.podrestart.alertTitle  | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.podrestart.alertTimeRangeFrom  }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.podrestart.datasourceUid | quote }}  
+                model:
+                  editorMode: code
+                  expr: 
+                    increase(kube_pod_container_status_restarts_total[{{ .Values.grafana.alerting.alerts.podrestart.duration }}])
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.podrestart.alertFor  | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.podrestart.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.podrestart.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.podrestart.alertseverity   | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.podrestart.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.podrestart.panelId | quote }}
+              summary: "Pod Restart Detected"
+              description: 'Pod {{ "{{" }} $labels.pod {{ "}}" }} in namespace {{ "{{" }} $labels.namespace {{ "}}" }} has restarted'
+   
+   
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertUid  | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertInterval | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertUid  | quote }}
+            title: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertTitle | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.highMemoryUsage.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                     (metrics_executor_memoryUsed_bytes / metrics_executor_memoryTotal_bytes) * 100 > {{ .Values.grafana.alerting.alerts.highMemoryUsage.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+  
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.highMemoryUsage.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.highMemoryUsage.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.highMemoryUsage.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.highMemoryUsage.panelId | quote }}
+              summary: "High Memory Usage Detected"
+              description: 'Memory usage exceeded {{ .Values.grafana.alerting.alerts.highMemoryUsage.thresholdValue }}% for more than {{ .Values.grafana.alerting.alerts.highMemoryUsage.alertFor }}. POD: {{ "{{" }} $labels.pod_name {{ "}}" }} in namespace {{ "{{" }} $labels.namespace {{ "}}" }}'
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.highFailedTasks.name  | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertFolder   | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertInterval   | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertUid   | quote }}
+            title: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertTitle  | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertTimeRangeFrom  }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.highFailedTasks.datasourceUid  | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                    sum by (container) (increase(metrics_executor_failedTasks_total[{{ .Values.grafana.alerting.alerts.highFailedTasks.duration }}])) > {{ .Values.grafana.alerting.alerts.highFailedTasks.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+ 
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.highFailedTasks.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.highFailedTasks.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.highFailedTasks.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.highFailedTasks.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.highFailedTasks.panelId | quote }}
+              summary: "High Number of Failed Tasks"
+              description: 'There have been failed tasks detected in the last {{ .Values.grafana.alerting.alerts.highFailedTasks.duration }}. Spark Application: {{ "{{" }} $labels.spark_app_id {{ "}}" }}  Pod Name: {{ "{{" }} $labels.pod_name {{ "}}" }} in namespace {{ "{{" }} $labels.namespace {{ "}}" }}'
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.name  | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertFolder  | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertInterval | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertUid   | quote }}
+            title: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertTitle | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertTimeRangeFrom   }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.datasourceUid  | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                    (
+                      sum by (pod_name, namespace, application_name) (metrics_executor_completedTasks_total) 
+                      / 
+                      sum by (pod_name, namespace, application_name) (metrics_executor_totalTasks_total)
+                    ) * 100 <{{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+ 
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.alertseverity  | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.panelId | quote }}
+              summary: "Low Task Success Rate"
+              description: 'The task success rate has dropped below {{ .Values.grafana.alerting.alerts.lowTaskSuccessRate.thresholdValue }}%. POD: {{ "{{" }} $labels.pod_name {{ "}}" }} in namespace {{ "{{" }} $labels.namespace {{ "}}" }} Application: {{ "{{" }} $labels.application_name {{ "}}" }}'
+
+
+     
+
+      # High Major GC Pauses Alert for services
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.majorGcAlert.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.majorGcAlert.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.majorGcAlert.alertInterval | quote }}
+        rules:
+        {{- range .Values.grafana.alerting.alerts.iomServicesList }}
+          - uid: {{ printf "%s-%s" $.Values.grafana.alerting.alerts.majorGcAlert.alertUid . | quote }}
+            title: {{ printf "%s - %s" $.Values.grafana.alerting.alerts.majorGcAlert.alertTitle . | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ $.Values.grafana.alerting.alerts.majorGcAlert.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ $.Values.grafana.alerting.alerts.majorGcAlert.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                    sum(increase(jvm_gc_pause_seconds_count{service="{{ . }}", action="end of major GC"}[{{ $.Values.grafana.alerting.alerts.majorGcAlert.duration }}])) > {{ $.Values.grafana.alerting.alerts.majorGcAlert.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+            noDataState: OK
+            execErrState: Error
+            for: {{ $.Values.grafana.alerting.alerts.majorGcAlert.alertFor | quote }}
+            labels:
+              dashboardUid: {{ $.Values.grafana.alerting.alerts.majorGcAlert.dashboardUid | quote }}
+              panelId: {{ $.Values.grafana.alerting.alerts.majorGcAlert.panelId | quote }}
+              severity: {{ $.Values.grafana.alerting.alerts.majorGcAlert.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ $.Values.grafana.alerting.alerts.majorGcAlert.dashboardUid | quote }}
+              __panelId__: {{ $.Values.grafana.alerting.alerts.majorGcAlert.panelId | quote }}
+              summary: "High Major GC Pauses Detected for Service: {{ . }}"
+              description: 'Significant number of Major GC pauses have occurred in the last {{ $.Values.grafana.alerting.alerts.majorGcAlert.duration }} for service {{ . }}. This may impact performance adversely.'
+        {{- end }}
+
+ 
+
+      # Frequent GC Pauses Alert
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.frequentGcAlert.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertInterval | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertUid | quote }}
+            title: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertTitle | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.frequentGcAlert.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                      sum by (service, app) (increase(jvm_gc_pause_seconds_count[10m])) > 30
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+ 
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.frequentGcAlert.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.frequentGcAlert.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.frequentGcAlert.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.frequentGcAlert.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.frequentGcAlert.panelId | quote }}
+              summary: "frequent GC Pauses detected."
+              description: 'frequent GC pauses occurred in the last {{ .Values.grafana.alerting.alerts.frequentGcAlert.duration }}. Service: {{ "{{" }} $labels.service {{ "}}" }} APP: {{ "{{" }} $labels.app {{ "}}" }}'
+
+      # High JVM Heap Memory Usage Alert
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertInterval | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertUid | quote }}
+            title: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertTitle | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                    (sum(jvm_memory_used_bytes{service="$service", area="heap"}) / sum(jvm_memory_max_bytes{service="$service", area="heap"})) * 100 > {{ .Values.grafana.alerting.alerts.heapMemoryAlert.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+ 
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.heapMemoryAlert.panelId | quote }}
+              summary: "High JVM Heap Memory Usage"
+              description: 'JVM heap memory usage is above {{ .Values.grafana.alerting.alerts.heapMemoryAlert.thresholdValue }}% for {{ .Values.grafana.alerting.alerts.heapMemoryAlert.duration }}. Service: {{ "{{" }} $labels.service {{ "}}" }}'
+
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.requestLatencyAlert.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.requestLatencyAlert.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.requestLatencyAlert.alertInterval | quote }}
+        rules:
+          {{- range .Values.grafana.alerting.alerts.iomServicesList }}
+          - uid: {{ printf "%s-%s" $.Values.grafana.alerting.alerts.requestLatencyAlert.alertUid . | quote }}
+            title: {{ printf "%s - %s" $.Values.grafana.alerting.alerts.requestLatencyAlert.alertTitle . | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                      (
+                        avg(rate(http_server_requests_seconds_sum{service="$service"}[{{ $.Values.grafana.alerting.alerts.requestLatencyAlert.duration }}]))
+                        / 
+                        sum(rate(http_server_requests_seconds_count{service="$service"}[{{ $.Values.grafana.alerting.alerts.requestLatencyAlert.duration }}]))
+                      ) * 1000 > {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.thresholdValue }}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+            noDataState: OK
+            execErrState: Error
+            for: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.alertFor | quote }}
+            labels:
+              dashboardUid: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.dashboardUid | quote }}
+              panelId: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.panelId | quote }}
+              severity: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.dashboardUid | quote }}
+              __panelId__: {{ $.Values.grafana.alerting.alerts.requestLatencyAlert.panelId | quote }}
+              summary: "High Request Latency Detected"
+              description: "Significant request latency, potentially due to Major GC pauses, has been detected for service {{ "{{ $labels.service "}}}} in the last 10 minutes. This may adversely impact performance and could affect user experience."
+          {{- end }}
+
+      - orgId: 1
+        name: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.name | quote }}
+        folder: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertFolder | quote }}
+        interval: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertInterval | quote }}
+        rules:
+          - uid: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertUid | quote }}
+            title: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertTitle | quote }}
+            condition: A
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertTimeRangeFrom }}
+                  to: 0
+                datasourceUid: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.datasourceUid | quote }}
+                model:
+                  editorMode: code
+                  expr: >
+                    100 * (
+                      sum by(pod_name, application_name, spark_app_id, job) (rate(metrics_executor_completedTasks_total[5m]))
+                      /
+                      sum by(pod_name, application_name, spark_app_id, job) (rate(metrics_executor_totalTasks_total[5m]))
+                    ) < 90
+
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+ 
+            noDataState: OK
+            execErrState: Error
+            for: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertFor | quote }}
+            labels:
+              dashboardUid: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.dashboardUid | quote }}
+              panelId: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.panelId | quote }}
+              severity: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.alertseverity | quote }}
+            annotations:
+              __dashboardUid__: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.dashboardUid | quote }}
+              __panelId__: {{ .Values.grafana.alerting.alerts.jobSuccessRateAlert.panelId | quote }}
+              summary: "Job Success Rate Alert: Low success rate detected"
+              description: "A significant drop in job success rate below the threshold of 90% has been detected for Application {{ "{{" }} $labels.application_name {{ "}}" }} over the last 5 minutes. This low success rate may adversely impact performance and reliability."
+ 
+
+ 
+
+ {{- end }}

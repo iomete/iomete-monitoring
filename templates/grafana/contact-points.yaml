@@ -1,0 +1,146 @@
+{{ if .Values.grafana.alerting.enabled }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-alerting
+  namespace: {{ .Release.Namespace }}
+data:
+  contactpoints.yaml: |-
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: combined_notifier
+        isDefault: false
+        receivers:
+          {{- if .Values.grafana.alerting.notifications.slack.enabled }}
+          - uid: slack
+            type: slack
+            settings:
+              icon_emoji: heart
+              url: "{{ .Values.grafana.alerting.notifications.slack.webhookUrl }}"
+              text: '{{`{{ template "alert.body" . }}`}}'
+              title: '{{`{{ template "alert.title" . }}`}}'
+
+          {{- end }}
+
+          {{- if .Values.grafana.alerting.notifications.email.enabled }}
+          - uid: "email" 
+            type: email
+            name: email receiver
+            settings:
+              addresses: "{{ .Values.grafana.alerting.notifications.notifierAddresses }}"
+              subject: '{{`{{ template "alert.title" . }}`}}'
+              message: '{{`{{ template "mail-alert.body" . }}`}}'  
+          {{- end }}
+
+
+    templates:
+      - orgId: 1
+        name: alert.title
+        template: |
+          {{`{{ define "alert.title" }}`}}
+          {{`{{- if gt (len .Alerts.Firing) 0 -}}`}}
+            Firing Alert: 
+            {{`{{- range .Alerts.Firing -}}`}}
+              {{`{{ .Labels.alertname }}`}},
+            {{`{{- end -}}`}}
+          {{`{{- end -}}`}}
+          {{`{{- if gt (len .Alerts.Resolved) 0 -}}`}}
+            Resolved Alert: 
+            {{`{{- range .Alerts.Resolved -}}`}}
+              {{`{{ .Labels.alertname }}`}},
+            {{`{{- end -}}`}}
+          {{`{{- end -}}`}}
+          {{`{{ end }}`}}
+
+      - orgId: 1
+        name: alert.body
+        template: |
+          {{`{{ define "alert.body" }}`}}
+          {{`{{ if gt (len .Alerts.Firing) 0 }}`}}
+          *:fire: Firing Alerts:*
+          
+          {{`{{ range .Alerts.Firing }}`}}
+          - *Alert:* {{`{{ if .Labels.alertname }}{{ .Labels.alertname }}{{ else }}Unknown Alert{{ end }}`}}
+          *Summary:* {{`{{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}No summary provided{{ end }}`}}
+          *Description:* {{`{{ if .Annotations.description }}{{ .Annotations.description }}{{ else }}No description provided{{ end }}`}}
+          {{ if .Values.grafana.domainAccess.enabled }}
+          *Alert Dashboard:* https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}
+          *Alert Panel:* https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}?viewPanel={{`{{ .Labels.panelId }}`}}
+          {{ end }}
+          
+          {{`{{ end }}`}}
+          {{`{{ end }}`}}
+          
+          {{`{{ if gt (len .Alerts.Resolved) 0 }}`}}
+          *:white_check_mark: Resolved Alerts:*
+          
+          {{`{{ range .Alerts.Resolved }}`}}
+          - *Alert:* {{`{{ if .Labels.alertname }}{{ .Labels.alertname }}{{ else }}Unknown Alert{{ end }}`}}
+          *Summary:* {{`{{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}No summary provided{{ end }}`}}
+          *Description:* {{`{{ if .Annotations.description }}{{ .Annotations.description }}{{ else }}No description provided{{ end }}`}}
+          {{ if .Values.grafana.domainAccess.enabled }}
+          *Alert Dashboard:* https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}
+          *Alert Panel:* https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}?viewPanel={{`{{ .Labels.panelId }}`}}
+          {{ end }}
+          
+          {{`{{ end }}`}}
+          {{`{{ end }}`}}
+          {{`{{ end }}`}}
+                        
+      - orgId: 1
+        name: mail-alert.body
+        template: | 
+          {{`{{ define "mail-alert.body" -}}`}}
+          {{`{{- if gt (len .Alerts.Firing) 0 -}}`}}
+            Firing Alerts | 
+            {{`{{- range .Alerts.Firing -}}`}}
+              - Alert: {{`{{ .Labels.alertname }}`}}
+                Summary: {{`{{ .Annotations.summary }}`}}
+                Description: {{`{{ .Annotations.description }}`}}
+                {{ if .Values.grafana.domainAccess.enabled }}
+                Alert Dashboard: https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}
+                Alert Panel: https://{{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}?viewPanel={{`{{ .Labels.panelId }}`}}
+                {{ end }}
+            {{`{{- end -}}`}}
+          {{`{{- end -}}`}}
+
+          {{`{{- if gt (len .Alerts.Resolved) 0 -}}`}}
+            Resolved Alerts | 
+            {{`{{- range .Alerts.Resolved -}}`}}
+              - Alert: {{`{{ .Labels.alertname }}`}}
+                Summary: {{`{{ .Annotations.summary }}`}}
+                Description: {{`{{ .Annotations.description }}`}}
+                {{ if .Values.grafana.domainAccess.enabled }}
+                Alert Dashboard: {{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}
+                Alert Panel: {{ .Values.grafana.domainAccess.domain }}/monitoring/d/{{`{{ .Labels.dashboardUid }}`}}?viewPanel={{`{{ .Labels.panelId }}`}}
+                {{ end }}
+            {{`{{- end -}}`}}
+          {{`{{- end -}}`}}
+          {{`{{ end }}`}}
+
+    {{- if or .Values.grafana.alerting.notifications.slack.enabled .Values.grafana.alerting.notifications.email.enabled }}
+    policies:
+      - orgId: 1
+        receiver: combined_notifier
+        group_by: ['alertname']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 1h
+        routes:
+          - receiver: combined_notifier
+            object_matchers:
+              - - severity
+                - =
+                - critical
+              - - severity
+                - =
+                - warning
+              - - severity
+                - =
+                - info
+      {{- end }}
+{{- end }}
+            
+    

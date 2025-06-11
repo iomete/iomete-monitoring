@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+    app: grafana
+data:
+  grafana.ini: |
+    [server]
+    root_url = %(protocol)s://%(domain)s/monitoring/
+    serve_from_sub_path = true
+    {{ if .Values.grafana.domainAccess.enabled }}
+    domain = {{ .Values.grafana.domainAccess.domain }}
+    {{ end }}
+ 
+
+    [auth]
+    disable_login_form = false
+
+    [auth.anonymous]
+    enabled = true
+    org_name = Main Org.
+    org_role = Admin
+
+    [security]
+    allow_embedding = true
+
+    [users]
+    default_theme = light
+    allow_sign_up = false
+    auto_assign_org = true
+    auto_assign_org_role = Admin
+
+    [smtp]
+    enabled = {{ .Values.grafana.alerting.notifications.email.enabled }}
+    host = {{ .Values.grafana.alerting.notifications.email.smtp.host }}
+    user = {{ .Values.grafana.alerting.notifications.email.smtp.user }}
+    password = {{ .Values.grafana.alerting.notifications.email.smtp.password }}
+    skip_verify = {{ .Values.grafana.alerting.notifications.email.smtp.skip_verify }}
+    from_name = {{ .Values.grafana.alerting.notifications.email.smtp.from_name }}
+    from_address = {{ .Values.grafana.alerting.notifications.email.smtp.from_address }}
+    

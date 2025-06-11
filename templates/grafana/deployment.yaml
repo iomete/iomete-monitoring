@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-grafana
+  labels:
+    {{- include "iomete-monitoring-chart.labels" . | nindent 4}}
+    app: grafana
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 6}}
+      app: grafana
+  template:
+    metadata:
+      labels:
+        {{- include "iomete-monitoring-chart.selectorLabels" . | nindent 8}}
+        app: grafana
+      annotations:
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/datasources.yaml") . | sha256sum }}
+        checksum/dashboards: {{ include (print $.Template.BasePath "/grafana/dashboards.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-prometheus-sa
+      securityContext:
+        fsGroup: 472
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.docker.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: grafana
+          image:  {{ .Values.docker.repo }}/grafana:11.5.1
+          imagePullPolicy: {{ .Values.docker.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 472
+            runAsGroup: 472
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ .Values.grafana.adminUser | quote }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ .Values.grafana.adminPassword | quote }}
+            {{- range $key, $value := .Values.grafana.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          {{- if .Values.grafana.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: {{ .Values.grafana.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.grafana.readinessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.grafana.readinessProbe.periodSeconds }}
+            successThreshold: {{ .Values.grafana.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.grafana.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.grafana.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: {{ .Values.grafana.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.grafana.livenessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.grafana.livenessProbe.periodSeconds }}
+            successThreshold: {{ .Values.grafana.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.grafana.livenessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 2048m
+              memory: 2048Mi
+          volumeMounts:
+          {{- if .Values.grafana.alerting.enabled }}
+            - name: alert-rules
+              mountPath: /etc/grafana/provisioning/alerting/container-alerts.yaml
+              subPath: container-alerts.yaml
+            - name: alerting-config
+              mountPath: /etc/grafana/provisioning/alerting/contactpoints.yaml 
+              subPath: contactpoints.yaml  
+          {{- end }}
+            - name: dashboards-alerts-gv
+              mountPath: /etc/grafana/provisioning/dashboards/files/alerts
+            - name: dashboards-support-services
+              mountPath: /etc/grafana/provisioning/dashboards/files/sup-serv
+            - name: storage
+              mountPath:  /var/lib/grafana/data
+            - name: config
+              mountPath: /etc/grafana/grafana.ini
+              subPath: grafana.ini
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-config
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+            - name: application-folder
+              mountPath: /etc/grafana/provisioning/dashboards/files/application
+            - name: spark-folder
+              mountPath: /etc/grafana/provisioning/dashboards/files/spark
+            - name: kubernetes-folder
+              mountPath: /etc/grafana/provisioning/dashboards/files/kubernetes
+            - name: internal-folder
+              mountPath: /etc/grafana/provisioning/dashboards/files/internal
+
+      volumes:
+      - name: plugin-source
+        emptyDir: {}
+      {{- if .Values.grafana.alerting.enabled }}
+      - name: alert-rules
+        configMap:
+          name: {{ .Release.Name }}-grafana-alerts
+      - name: alerting-config
+        configMap:
+          name: {{ .Release.Name }}-grafana-alerting  
+      {{- end }}
+
+      - name: dashboards-alerts-gv
+        configMap:
+          name: {{ .Release.Name }}-grafana-alert-folder-gv
+
+      - name: dashboards-support-services
+        configMap:
+          name: {{ .Release.Name }}-grafana-support-services
+
+
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}-grafana-config
+
+      - name: datasources
+        configMap:
+          name: {{ .Release.Name }}-grafana-datasources
+
+
+      - name: dashboards-config
+        configMap:
+          name: {{ .Release.Name }}-grafana-dashboards
+
+      - name: application-folder
+        configMap:
+          name: {{ .Release.Name }}-grafana-application-folder
+
+      - name: spark-folder
+        configMap:
+          name: {{ .Release.Name }}-grafana-spark-folder
+
+      - name: kubernetes-folder
+        configMap:
+          name: {{ .Release.Name }}-grafana-kubernetes-folder
+
+      - name: internal-folder
+        configMap:
+          name: {{ .Release.Name }}-grafana-internal-folder
+
+      {{- if eq .Values.grafana.storage.type "pvc" }}
+      - name: storage
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-grafana
+      {{- else }}
+      - name: storage
+        emptyDir: {}
+      {{- end }}
+
+    {{- if .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.global.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml .Values.global.tolerations | nindent 8 }}
+    {{- end }}

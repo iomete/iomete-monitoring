@@ -1,0 +1,545 @@
+docker:
+  repo: iomete.azurecr.io/iomete
+  pullPolicy: Always
+  imagePullSecrets: []
+
+# -- IOMETE system namespace where core components are deployed
+# @param iometeSystemNamespace System namespace name
+# @default -- "iomete-system"
+iometeSystemNamespace: "iomete-system"
+
+# -- List of Kubernetes namespaces to monitor in the data plane
+# @param dataPlaneNamespaces List of namespaces to monitor
+# @default -- []
+dataPlaneNamespaces: []
+
+# -- Network Policy configuration
+networkPolicy:
+  # -- Enable network policies
+  enabled: false
+  # -- Additional allowed ingress rules
+  additionalAllowedIngress: []
+  # -- Additional allowed egress rules
+  additionalAllowedEgress: []
+
+## clusterRoleAccess controls the RBAC scope for Prometheus.
+## - If enabled (true), creates a ClusterRole and ClusterRoleBinding with cluster-wide access to resources like nodes, metrics, and ingresses.
+## - If disabled (false), creates a Role and RoleBinding per namespace (from monitoring.namespaces) with limited access to namespace-scoped resources (e.g., services, pods, deployments).
+## This is required for Prometheus to discover services, endpoints, and collect metrics.
+## When disabled, cluster-wide metrics (e.g., node metrics, cAdvisor metrics) will not be available.
+clusterRoleAccess:
+  enabled: true
+ 
+
+global:
+  storageClassName: "default"
+  nodeSelector: {}
+    # node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+    # - key: beta.kubernetes.io/instance-type
+    #   operator: "Exists"
+    #   effect: "NoSchedule"
+
+# -- Grafana configuration
+grafana:
+  # -- Domain name (IOMETE ui Access URL) for getting alerting dashboards and alerts URL. Dont use https:// or http://
+  domainAccess:
+    enabled: false
+    domain: "sub.domain.com"
+ 
+  
+  # -- Admin credentials
+  adminUser: "admin"
+  # -- Admin password (change in production)
+  # @required
+  adminPassword: "admin"
+  
+  alerting:
+    enabled: false
+    # -- Alert notification channel
+    notifications:
+      slack:
+        enabled: false
+        webhookUrl: "https://hooks.slack.com"
+      email:
+        enabled: false
+        # -- Email notification configuration
+        smtp:
+          host: smtp.gmail.com:587
+          user: mail@domain
+          password: "mail@domain.com"
+          skip_verify: false
+          from_name: grafana-alerts
+          from_address: mail@domain.com
+      
+      ## -- Users to notify about alerts ( you can add multiple emails sung (,) separator) )
+      notifierAddresses: "email@domain.com"
+     
+    alerts:
+      AlertServicesList:
+        - iom-core
+        - iom-identity
+        - iom-rest-catalog
+        - iom-sql
+        - iom-catalog
+        - spark-history
+        - spark-operator-webhook
+        - spark-operator-submit-service
+        - spark-operator-controller
+        - iom-socket
+        - iom-gateway
+        - iom-spark-connect
+      iomServicesList:
+        - iom-core
+        - iom-identity
+        - iom-rest-catalog
+        - iom-sql
+        - iom-catalog
+        - spark-history
+        - spark-operator
+        - iom-socket
+        - iom-gateway
+        - iom-spark-connect-driver
+      # -- Alerting rules
+      podrestart:
+        enabled: true
+        name: "kubernetes-pod-restarts"
+        alertFolder: "Alerts"
+        alertInterval: "1m"
+        alertUid: "container-restart"
+        alertTitle: "Pod Restart"
+        alertFor: "0m"
+        duration: "1m"
+        thresholdValue: 1
+        alertSeverity: "critical"
+        datasourceUid: "Prometheus"
+        alertTimeRangeFrom: 300
+        dashboardUid: "serv-avail"
+        panelId: "11"
+      
+      highMemoryUsage:
+        enabled: true
+        alertFolder: "Alerts"
+        alertInterval: "5m"
+        alertUid: "high-memory-usage"
+        alertTitle: "High Memory Usage"
+        alertFor: "30m"
+        thresholdValue: 99
+        alertSeverity: "critical"
+        datasourceUid: "Prometheus"
+        alertTimeRangeFrom: 300
+        dashboardUid: "lrsr"
+        panelId: "3"
+      
+      highFailedTasks:
+        enabled: true
+        name: "high-failed-tasks"
+        alertFolder: "Alerts"
+        alertInterval: "5m"
+        alertUid: "high-failed-tasks"
+        alertTitle: "High Failed Tasks"
+        alertFor: "30m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 10
+        duration: "30m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "4"
+      
+      lowTaskSuccessRate:
+        enabled: true
+        name: "low-task-success-rate"
+        alertFolder: "Alerts"
+        alertInterval: "1m"
+        alertUid: "low-task-success-rate"
+        alertTitle: "Low Task Success Rate"
+        alertFor: "20m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 90
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "5"
+      
+      serviceAvailability:
+        enabled: true
+        name: "service-availability"
+        alertFolder: "Alerts"
+        alertInterval: "60s"
+        alertUid: "sa"
+        alertTitle: "Service Availability"
+        alertFor: "30s"
+        alertSeverity: "critical"
+        alertTimeRangeFrom: 300
+        duration: "60s"
+        datasourceUid: "Prometheus"
+        dashboardUid: "serv-avail"
+        panelIdMap: # Map service names to panel IDs
+          iom-core: 4
+          iom-identity: 3
+          iom-rest-catalog: 1
+          iom-sql: 5
+          iom-catalog: 2
+          spark-history: 6
+          spark-operator-webhook: 7
+          spark-operator-submit-service: 7
+          spark-operator-controller: 7
+          iom-socket: 8
+          iom-gateway: 9
+          iom-spark-connect: 10
+      
+      requestLatencyAlert:
+        enabled: true
+        name: "request-latency-alert"
+        alertFolder: "Alerts"
+        alertInterval: "10m"
+        alertUid: "request-latency"
+        alertTitle: "High HTTP Request Latency (Average > 500ms)"
+        alertFor: "10m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 500
+        duration: "10m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "10"
+      
+      frequentGcAlert:
+        enabled: true
+        name: "frequent-gc-pauses"
+        alertFolder: "Alerts"
+        alertInterval: "1m"
+        alertUid: "frequent-gc-pauses"
+        alertTitle: "Frequent JVM GC Pauses"
+
+        alertFor: "10m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 30
+        duration: "10m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "7"
+      
+      majorGcAlert:
+        enabled: true
+        name: "high-major-gc-pauses"
+        alertFolder: "Alerts"
+        alertInterval: "1m"
+        alertUid: "mjr-gc-pauses"
+        alertTitle: "High Major GC Pauses"
+        alertFor: "10m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 30
+        duration: "10m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "8"
+      
+      heapMemoryAlert:
+        enabled: true
+        name: "high-heap-memory-usage"
+        alertFolder: "Alerts"
+        alertInterval: "1m"
+        alertUid: "heap-memory-usage"
+        alertTitle: "High JVM Heap Memory Usage"
+        alertQuery: >
+          sum(jvm_memory_used_bytes{service="$service",   area="heap"}) * 100
+          /
+          sum(jvm_memory_max_bytes{service="$service",   area="heap"}) > 85
+        alertFor: "10m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 85
+        duration: "10m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "12"
+      
+      jobSuccessRateAlert:
+        enabled: true
+        name: "job-success-rate-alert"
+        alertFolder: "Alerts"
+        alertInterval: "10m"
+        alertUid: "job-success-rate"
+        alertTitle: "Job Success Rate"
+        alertQuery: >
+          100 * (
+            sum by(pod_name, application_name, spark_app_id, job) (rate(metrics_executor_completedTasks_total[5m]))
+            /
+            sum by(pod_name, application_name, spark_app_id, job) (rate(metrics_executor_totalTasks_total[5m]))
+          ) < 90
+        alertFor: "10m"
+        alertSeverity: "warning"
+        alertTimeRangeFrom: 300
+        thresholdValue: 90
+        duration: "10m"
+        datasourceUid: "Prometheus"
+        dashboardUid: "lrsr"
+        panelId: "9"
+  
+  # -- Additional environment variables
+  env: { }
+    # GF_AUTH_ANONYMOUS_ENABLED: "true"
+    # GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+  
+  # -- Readiness probe configuration
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  
+  # -- Liveness probe configuration
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    timeoutSeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+    # -- Source IP ranges for LoadBalancer
+    loadBalancerSourceRanges: []
+  
+  # -- Storage configuration
+  storage:
+    # -- Storage type (emptyDir, pvc)
+    type: emptyDir
+    # -- PVC configuration
+    pvc:
+      # -- Storage class name (empty to use global.storageClass, or cluster default if both are empty)
+      storageClassName: ""
+      # -- PVC size
+      size: 10Gi
+      accessModes:
+        - ReadWriteOnce
+    # -- EmptyDir configuration
+    emptyDir: { }
+  
+  # -- Grafana plugins to install
+  plugins: []
+    # - grafana-json-api-datasource
+    # - grafana-piechart-panel
+  # - grafana-worldmap-panel
+
+# -- Prometheus configuration
+prometheus:
+  # -- Data retention period
+  retention: 7d
+  
+  # -- High availability configuration
+  ha:
+    enabled: false
+    replicas: 1
+  
+  # -- Node affinity configuration
+  affinity: { }
+  
+  # -- Node tolerations
+  tolerations: []
+  
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 50Gi
+    # -- Storage class name (empty to use global.storageClass, or cluster default if both are empty)
+    storageClassName: ""
+    # accessModes:
+    #   - ReadWriteMany
+  
+  # -- Readiness probe configuration
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  
+  # -- Liveness probe configuration
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    timeoutSeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+
+
+
+
+
+
+###
+##
+### Loki configuration
+##
+####
+
+## Loki requiered full access to the cluster (node, pods, services, etc). If clusterrole access is disable or not available, you can disable this option.
+## Service will be available but most features will not work properly
+
+loki:
+  enabled: false
+  
+  # -- Configuration for the Loki service
+  loki:
+  ### -- Loki configuration
+  ## Dont change this unless you know what you are doing
+    auth_enabled: false
+    replication_factor: 1
+    schemaConfig:
+      configs:
+        - from: 2024-04-01
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+    
+  ## -- Storage configuration
+  ## Need to configure for you object storage credentials
+    storage:
+      bucketNames:
+        chunks: assets
+        ruler: assets
+        admin: assets
+      type: s3
+      s3:
+        endpoint: http://minio:9000
+        region: us-east-1
+        secretAccessKey: secretKey
+        accessKeyId: accessKey
+        s3ForcePathStyle: true
+        insecure: false
+    ingester:
+      chunk_encoding: snappy
+    tracing:
+      enabled: true
+    querier:
+      # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
+      max_concurrent: 2
+  deploymentMode: SingleBinary
+  singleBinary:
+    replicas: 2
+    resources:
+      limits:
+        cpu: 3
+        memory: 4Gi
+      requests:
+        cpu: 2
+        memory: 2Gi
+    extraEnv:
+      # Keep a little bit lower than memory limits
+      - name: GOMEMLIMIT
+        value: 3750MiB
+
+  chunksCache:
+    # default is 500MB, with limited memory keep this smaller
+    writebackSizeLimit: 10MB
+
+  # Enable minio for storage
+  minio:
+    enabled: false
+
+  # Zero out replica counts of other deployment modes
+  backend:
+    replicas: 0
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+
+  ingester:
+    replicas: 0
+  querier:
+    replicas: 0
+  queryFrontend:
+    replicas: 0
+  queryScheduler:
+    replicas: 0
+  distributor:
+    replicas: 0
+  compactor:
+    replicas: 0
+  indexGateway:
+    replicas: 0
+  bloomCompactor:
+    replicas: 0
+  bloomGateway:
+    replicas: 0
+  test:
+    enabled: false
+    # Monitoring section determines which monitoring features to enable
+  monitoring:
+    dashboards:
+      enabled: false
+    rules:
+      enabled: false
+    serviceMonitor:
+      enabled: false
+    selfMonitoring:
+      enabled: false
+      grafanaAgent:
+        installOperator: false
+    lokiCanary:
+      enabled: false
+
+###
+##
+### End of Loki configuration
+##
+####
+
+
+# -- Database configuration
+database:
+  enabled: false
+  # -- PostgreSQL host
+  # @required
+  host: "postgresql"
+  # -- PostgreSQL port
+  port: "5432"
+  adminCredentials:
+    # -- Admin username
+    # @required
+    user: "postgres"
+    # -- Admin password
+    # @required
+    password: ""
+  ssl:
+    # -- SSL mode (disable, verify-full)
+    mode: "disable"
+
+# -- Storage configuration
+storage:
+  enabled: false
+  # -- Storage bucket name
+  bucketName: "lakehouse"
+  # -- Storage type (minio or dell_ecs)
+  type: "minio"
+  minioSettings:
+    # -- MinIO endpoint URL
+    endpoint: "http://minio.iomete-system.svc.cluster.local:9000"
+    # -- MinIO metrics bearer token
+    token: ""
+
+
+# -- Typesense exporter configuration
+typesenseExporter:
+  enabled: false
+  # -- Typesense connection settings
+  settings:
+    apiKey: "Rhsdhas2asasdasj2"
+    service: "typesense"
+    port: "80"
