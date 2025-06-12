@@ -434,15 +434,15 @@ prometheus:
 ## Service will be available but most features will not work properly
 
 loki:
-  enabled: true
+  enabled: false
   
   # -- Configuration for the Loki service
   loki:
   ### -- Loki configuration
   ## Dont change this unless you know what you are doing
     auth_enabled: false
-    limits_config:
-      max_label_names_per_series: 25
+   #limits_config:   #Enable if the number of labels in a pod is more than 15.
+   #  max_label_names_per_series: 25
     replication_factor: 1
     schemaConfig:
       configs:
