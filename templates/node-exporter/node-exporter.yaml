@@ -16,14 +16,14 @@ spec:
     {{- if .Values.nodexporter.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.nodexporter.nodeSelector | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
     {{- if .Values.nodexporter.tolerations }}
       tolerations:
         {{- toYaml .Values.nodexporter.tolerations | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.tolerations }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

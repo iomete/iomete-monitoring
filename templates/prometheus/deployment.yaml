@@ -153,14 +153,14 @@ spec:
     {{- if .Values.prometheus.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.prometheus.nodeSelector | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
     {{- if .Values.prometheus.tolerations }}
       tolerations:
         {{- toYaml .Values.prometheus.tolerations | nindent 8 }}
-    {{- else }}
+    {{- else  if .Values.global.tolerations }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

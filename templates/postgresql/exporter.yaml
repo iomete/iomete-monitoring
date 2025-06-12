@@ -82,14 +82,14 @@ spec:
     {{- if .Values.database.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.database.nodeSelector | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
     {{- if .Values.database.tolerations }}
       tolerations:
         {{- toYaml .Values.database.tolerations | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.tolerations }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}

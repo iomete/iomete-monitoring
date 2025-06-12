@@ -80,14 +80,14 @@ spec:
     {{- if .Values.cadvisor.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.cadvisor.nodeSelector | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.nodeSelector }} 
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
     {{- if .Values.cadvisor.tolerations }}
       tolerations:
         {{- toYaml .Values.cadvisor.tolerations | nindent 8 }}
-    {{- else }}
+    {{- else if .Values.global.tolerations }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}
