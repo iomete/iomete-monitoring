@@ -30,15 +30,51 @@ networkPolicy:
 clusterRoleAccess:
   enabled: true
  
-
 global:
   storageClassName: "default"
   nodeSelector: {}
     # node.kubernetes.io/instance-type: "demo"
   tolerations: []
-    # - key: beta.kubernetes.io/instance-type
+    # - key: istanbul.kubernetes.io/instance-type
     #   operator: "Exists"
     #   effect: "NoSchedule"
+
+
+nodexporter:
+  nodeSelector: {}
+     #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+    
+blackbox:
+  nodeSelector: {}
+     #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+    #
+cadvisor:
+  nodeSelector: {}
+     #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+
+kubestatemetrics:
+  nodeSelector: {}
+     #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+
+
+
+
 
 # -- Grafana configuration
 grafana:
@@ -53,6 +89,12 @@ grafana:
   # -- Admin password (change in production)
   # @required
   adminPassword: "admin"
+  nodeSelector: {}
+    #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+   #- key: istanbul.kubernetes.io/instance-type
+   #  operator: "Exists"
+   #  effect: "NoSchedule"
   
   alerting:
     enabled: false
@@ -342,10 +384,13 @@ prometheus:
     replicas: 1
   
   # -- Node affinity configuration
-  affinity: { }
-  
-  # -- Node tolerations
+  nodeSelector: {}
+     #node.kubernetes.io/instance-type: "demo"
   tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+
   
   # -- Persistence configuration
   persistence:
@@ -396,6 +441,8 @@ loki:
   ### -- Loki configuration
   ## Dont change this unless you know what you are doing
     auth_enabled: false
+   #limits_config:   #Enable if the number of labels in a pod is more than 15.
+   #  max_label_names_per_series: 25
     replication_factor: 1
     schemaConfig:
       configs:
@@ -421,7 +468,10 @@ loki:
         secretAccessKey: secretKey
         accessKeyId: accessKey
         s3ForcePathStyle: true
-        insecure: false
+        insecure: false #if you want nosecure,you should do  insecure true,uncomment http_config
+        #http_config:
+        #    insecure_skip_verify: true
+
     ingester:
       chunk_encoding: snappy
     tracing:
@@ -429,6 +479,24 @@ loki:
     querier:
       # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
       max_concurrent: 2
+
+  lokiCanary:
+    enabled: true
+    nodeSelector: {}
+      #node.kubernetes.io/instance-type: "demo"
+    tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
+  gateway:
+    enabled: true
+    replicas: 1
+    nodeSelector: {}
+      #node.kubernetes.io/instance-type: "demo"
+    tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
   deploymentMode: SingleBinary
   singleBinary:
     replicas: 2
@@ -439,6 +507,12 @@ loki:
       requests:
         cpu: 2
         memory: 2Gi
+    nodeSelector: {}
+      #node.kubernetes.io/instance-type: "demo"
+    tolerations: []
+     #- key: iomete.kubernetes.io/instance-type
+     #  operator: "Exists"
+     #  effect: "NoSchedule"
     extraEnv:
       # Keep a little bit lower than memory limits
       - name: GOMEMLIMIT
@@ -505,6 +579,13 @@ loki:
 # -- Database configuration
 database:
   enabled: false
+  nodeSelector: {}
+    #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+  #- key: iomete.kubernetes.io/instance-type
+  #  operator: "Exists"
+  #  effect: "NoSchedule"
+
   # -- PostgreSQL host
   # @required
   host: "postgresql"
@@ -543,3 +624,14 @@ typesenseExporter:
     apiKey: "Rhsdhas2asasdasj2"
     service: "typesense"
     port: "80"
+
+
+promtail:
+  enabled: true
+  nodeSelector: {}
+    #node.kubernetes.io/instance-type: "demo"
+  tolerations: []
+    # - key: istanbul.kubernetes.io/instance-type
+    #   operator: "Exists"
+    #   effect: "NoSchedule"
+

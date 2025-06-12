@@ -180,12 +180,17 @@ spec:
       - name: storage
         emptyDir: {}
       {{- end }}
-
-    {{- if .Values.global.nodeSelector }}
+    {{- if .Values.grafana.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.grafana.nodeSelector | nindent 8 }}
+    {{- else if .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.global.nodeSelector | nindent 8 }}
     {{- end }}
-    {{- if .Values.global.tolerations }}
+    {{- if .Values.grafana.tolerations }}
+      tolerations:
+        {{- toYaml .Values.grafana.tolerations | nindent 8 }}
+    {{- else if .Values.global.tolerations }}
       tolerations:
         {{- toYaml .Values.global.tolerations | nindent 8 }}
     {{- end }}
