@@ -156,7 +156,7 @@ grafana:
         alertSeverity: "critical"
         datasourceUid: "Prometheus"
         alertTimeRangeFrom: 300
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "11"
       
       highMemoryUsage:
@@ -170,7 +170,7 @@ grafana:
         alertSeverity: "critical"
         datasourceUid: "Prometheus"
         alertTimeRangeFrom: 300
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "3"
       
       highFailedTasks:
@@ -186,7 +186,7 @@ grafana:
         thresholdValue: 10
         duration: "30m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "4"
       
       lowTaskSuccessRate:
@@ -201,7 +201,7 @@ grafana:
         alertTimeRangeFrom: 300
         thresholdValue: 90
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "5"
       
       serviceAvailability:
@@ -216,7 +216,7 @@ grafana:
         alertTimeRangeFrom: 300
         duration: "60s"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelIdMap: # Map service names to panel IDs
           iom-core: 4
           iom-identity: 3
@@ -244,7 +244,7 @@ grafana:
         thresholdValue: 500
         duration: "10m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "10"
       
       frequentGcAlert:
@@ -261,7 +261,7 @@ grafana:
         thresholdValue: 30
         duration: "10m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "7"
       
       majorGcAlert:
@@ -277,7 +277,7 @@ grafana:
         thresholdValue: 30
         duration: "10m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "8"
       
       heapMemoryAlert:
@@ -297,7 +297,7 @@ grafana:
         thresholdValue: 85
         duration: "10m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "12"
       
       jobSuccessRateAlert:
@@ -319,7 +319,7 @@ grafana:
         thresholdValue: 90
         duration: "10m"
         datasourceUid: "Prometheus"
-        dashboardUid: "serv-avail"
+        dashboardUid: "lrsr"
         panelId: "9"
   
   # -- Additional environment variables
