@@ -453,7 +453,21 @@ loki:
           index:
             prefix: loki_index_
             period: 24h
-    
+    limits_config:
+      ingestion_rate_mb: 15
+      ingestion_burst_size_mb: 30
+      per_stream_rate_limit: 10MB
+      per_stream_rate_limit_burst: 20MB
+      retention_period: 744h
+      max_query_length: 0h
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      max_cache_freshness_per_query: 10m
+      split_queries_by_interval: 15m
+      query_timeout: 300s
+      volume_enabled: true
+    validation:
+      # max_series_per_query: 3000
   ## -- Storage configuration
   ## Need to configure for you object storage credentials
     storage:
@@ -463,10 +477,10 @@ loki:
         admin: assets
       type: s3
       s3:
-        endpoint: http://minio:9000
+        endpoint: http://minio.iomete-system.svc:9000 
         region: us-east-1
-        secretAccessKey: secretKey
-        accessKeyId: accessKey
+        secretAccessKey: accesskey 
+        accessKeyId: secretkey
         s3ForcePathStyle: true
         insecure: false #if you want nosecure,you should do  insecure true,uncomment http_config
         #http_config:

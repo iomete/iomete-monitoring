@@ -21,10 +21,12 @@ data:
         manageAlerts: false
 
  
+{{ if .Values.loki.enabled }}
     - name: Loki
       type: loki
-      url: http://loki-gateway.monitoring.svc.cluster.local
-      #url: http://loki:3100
+      uid: Loki
+      access: proxy
+      url: http://{{ .Release.Name }}-loki-gateway
       isDefault: false
       editable: false
       jsonData:
@@ -32,4 +34,5 @@ data:
         queryTimeout: "30s"
         httpMethod: "POST"
         maxLines: 1000
+{{ end }}
  
