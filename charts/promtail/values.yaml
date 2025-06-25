@@ -557,6 +557,11 @@ config:
           {{- with .Values.config.snippets.extraRelabelConfigs }}
           {{- toYaml . | nindent 4 }}
           {{- end }}
+          # Additional relabel config to ensure no pods are dropped
+          - action: keep
+            regex: .+
+            source_labels:
+            - __meta_kubernetes_pod_name
   # -- Config file contents for Promtail.
   # Must be configured as string.
   # It is templated so it can be assembled from reusable snippets in order to avoid redundancy.

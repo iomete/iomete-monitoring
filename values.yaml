@@ -466,6 +466,7 @@ loki:
       split_queries_by_interval: 15m
       query_timeout: 300s
       volume_enabled: true
+      max_label_names_per_series: 25
     validation:
       # max_series_per_query: 3000
   ## -- Storage configuration
