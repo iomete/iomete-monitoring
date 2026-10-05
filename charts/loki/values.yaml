@@ -3287,7 +3287,7 @@ memcachedExporter:
   enabled: true
   image:
     repository: prom/memcached-exporter
-    tag: v0.15.5
+    tag: v0.17.0
     pullPolicy: IfNotPresent
   resources: 
     requests:
